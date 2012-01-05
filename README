@@ -1,0 +1,4 @@
+﻿This is an attempt to extract data out of STE files faster then using SolidWork's export.
+
+We're primary interested in stress values for elements and nodes.
+
