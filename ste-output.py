@@ -15,7 +15,7 @@ def main():
     parser.add_option("-l", "--log", default="INFO",
                       action="store", type="string", dest="loglevel",
                       help="how many status messages do you want? "+
-                        "(error,WARN,info,debug)")
+                        "(error,warn,INFO,debug)")
 
     (options, args) = parser.parse_args()
 
@@ -26,8 +26,8 @@ def main():
     # specify --log=DEBUG or --log=debug
     numeric_loglevel = getattr(logging, options.loglevel.upper(), None)
     if not isinstance(numeric_loglevel, int):
-        logging.warn('Can not set log level "{}" (is not: error, warn, info or debug). Falling back to warn.'.format(options.loglevel))
-        numeric_loglevel = getattr(logging, 'warn', None)
+        logging.warn('Can not set log level "{}" (is not: error, warn, info or debug). Falling back to info.'.format(options.loglevel))
+        numeric_loglevel = getattr(logging, 'info', None)
     logging.basicConfig(level=numeric_loglevel)
 
     # parsing args
@@ -75,7 +75,8 @@ class STE_StressExtractor:
 
            If no output file name was specified a suffixed ste_input_filename will be used. 
         '''
-
+        
+        logging.info("Opening files...")
         self._ste_input = io.open(ste_input_filename, "rb", self.read_buffer_size)
 
         if ("" == elements_output_filename):
@@ -90,6 +91,7 @@ class STE_StressExtractor:
 
         self._extract_stress()
 
+        logging.info("Closing files...")
         self._ste_input.close()
         self._elements_output.close()
         self._nodes_output.close()
@@ -123,8 +125,8 @@ class STE_StressExtractor:
 
         t0 = time.time()
 
+        logging.info("Reading header...")
         data = self._ste_input.read(-1) #read whole file
-        t1 = time.time() - t0
 
         elem_no = struct.unpack('i',data[12:16])[0]
         node_no = struct.unpack('i',data[36:40])[0]
@@ -132,16 +134,17 @@ class STE_StressExtractor:
         data_start = struct.unpack('i',data[80:84])[0]
         byte_no = int(struct.unpack('f',data[data_start+4:data_start+8])[0])
         mesh_type = int(struct.unpack('f',data[data_start+12:data_start+16])[0])
-        logging.info('Calculation element No.: %i' % (elem_no))
-        logging.info('Calculation node No.: %i' % (node_no)) #, data_size, data_start, byte_no, mesh_type
+        logging.debug('Calculation element No.: %i' % (elem_no))
+        logging.debug('Calculation node No.: %i' % (node_no)) #, data_size, data_start, byte_no, mesh_type
         elem_no = int(data_size / 189)
-        logging.info('Real elem No: %i' % (elem_no))
+        logging.debug('Real elem No: %i' % (elem_no))
 
         start = data_start
         mpa = 1000000
         output_node =[[0]*7 for i in range(node_no)]
         real_node_no = 0.0
 
+        logging.info("Extracting stress values. Elements are saved. Nodes are computed. (It takes a while)...")
         for i in xrange(0, elem_no):
            
             elem = int(struct.unpack('f',data[start:start+4])[0])
@@ -163,13 +166,14 @@ class STE_StressExtractor:
 
             start = start + 4 * byte_no
 
-        logging.info('Real node No: %i' % (real_node_no))
+        logging.info("Saving stress values for nodes...")
+        logging.debug('Real node No: %i' % (real_node_no))
         for i in range(real_node_no):
             nod = output_node[i]
             self._save_node(i+1, (nod[1]/nod[0]/mpa, nod[2]/nod[0]/mpa, nod[3]/nod[0]/mpa, nod[4]/nod[0]/mpa, nod[5]/nod[0]/mpa, nod[6]/nod[0]/mpa))
 
         t3 = time.time() - t0
-        logging.info('Time of extraction: %6.3f sec' % (t3)) #, t1, t3
+        logging.debug('Time of extraction: %6.3f sec' % (t3))
 
 
 if __name__ == "__main__":
