@@ -146,7 +146,6 @@ class STE_StressExtractor:
 
         mpa = 1000000 # 1MPa = 10**6 Pa
         nodes =[[0]*7 for i in xrange(nr_of_nodes)]
-        real_nr_of_nodes = 0.0
 
         logging.info("Extracting stress values. Elements are saved. Nodes are computed. (It takes a while)...")
         for i in xrange(0, nr_of_elements):
@@ -164,8 +163,6 @@ class STE_StressExtractor:
             
             for node_in_element_no in range (0, nodes_per_element):
                 node_no = int(raw_nodes[8*node_in_element_no])
-                if real_nr_of_nodes < node_no:
-                    real_nr_of_nodes = node_no
 
                 n = nodes[node_no-1] # stress data for this node found so far
                 n[0] += 1 # counting elements that share this node
@@ -175,12 +172,11 @@ class STE_StressExtractor:
                     n[j] += raw_nodes[j+8*node_in_element_no]
 
         logging.info("Saving stress values for nodes...")
-        logging.debug('Real node No: %i' % (real_nr_of_nodes))
         # dividing stress values for a node by number of elements that share this node
-        for node_no in range(real_nr_of_nodes):
-            n = nodes[node_no]
-            self._save_node(node_no+1, (n[1]/n[0]/mpa, n[2]/n[0]/mpa, n[3]/n[0]/mpa, 
-                                        n[4]/n[0]/mpa, n[5]/n[0]/mpa, n[6]/n[0]/mpa))
+        for node_no, n in enumerate(nodes):
+            if 0 < n[0]:
+                self._save_node(node_no+1, (n[1]/n[0]/mpa, n[2]/n[0]/mpa, n[3]/n[0]/mpa, 
+                                            n[4]/n[0]/mpa, n[5]/n[0]/mpa, n[6]/n[0]/mpa))
 
         t3 = time.time() - t0
         logging.debug('Time of extraction: %6.3f sec' % (t3))
