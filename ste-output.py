@@ -53,6 +53,7 @@ import struct
 import time
 import datetime
 import io
+import array
 
 class STE_StressExtractor:
     '''STE_StressExtractor extracts stress values for nodes and elements from STE files'''
@@ -150,17 +151,17 @@ class STE_StressExtractor:
 
         logging.info("Extracting stress values. Elements are saved. Nodes are computed. (It takes a while)...")
         for i in xrange(0, nr_of_elements):
-            data = self._ste_input.read(4*record_size)
-           
+            data = array.array('f',self._ste_input.read(4*record_size))
+            
             # extracting stress values for an element
-            element_no = int(struct.unpack_from('f',data,0)[0])
-            element_stress = struct.unpack_from('6f',data,56)
+            element_no = int(data[0])
+            element_stress = data[14:20]
             self._save_element(element_no, (element_stress[0]/mpa, element_stress[1]/mpa, 
                                             element_stress[2]/mpa, element_stress[3]/mpa,  
                                             element_stress[4]/mpa, element_stress[5]/mpa))
             
             # extracting stress values for nodes in this element
-            raw_nodes = struct.unpack_from(str(nodes_per_element*8)+'f',data,116)
+            raw_nodes = data[29:(29+nodes_per_element*8)]
             
             for node_in_element_no in range (0, nodes_per_element):
                 node_no = int(raw_nodes[8*node_in_element_no])
